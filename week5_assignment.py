@@ -90,7 +90,7 @@ train_new.groupby('DayOfWeek')['Sales'].mean()
 train_new.groupby('Promo')['Sales'].mean()
 train_new.groupby('StoreType')['Sales'].mean()
 train_new.groupby('Assortment')['Sales'].mean()
-train_new.groupby('DayOfWeek')['Sales'].mean()
+train_new.groupby('PromoInterval')['Sales'].mean()
 train_new.groupby('SchoolHoliday')['Sales'].mean()
 train_new.groupby('StateHoliday')['Sales'].mean()
 #variables
@@ -126,15 +126,7 @@ def moving_average(data,col,window,lag=0):
         temp1['%s%d'%(col,i)]=data.groupby('Store')[col].shift(i).values
         temp2['Open%d'%(i)]=data.groupby('Store')['Open'].shift(i).values
     return (np.sum(temp1.values*temp2.values,1)/temp2.sum(1)).values
-'''
-#sales day on each store
-sales_count = train.groupby('Store')['Date'].count()
-#maximum day seller
-sel_store = sales_count[sales_count == sales_count.max()].index.values
-#train for maximum day eller
-sel_train = train[train['Store'].isin(sel_store)]
-sel_train = sel_train.sort_values(['Store','Date'])
-'''
+
 
 sel_train = pd.DataFrame()
 sel_train['Sales1W']=moving_average(train,'Sales',7,7)
@@ -241,7 +233,7 @@ for train_index, test_index in kf.split(X):
     test_x = X.iloc[test_index]
     test_y = y.iloc[test_index]
     
-    lasso = Lasso(alpha = 0.5)
+    lasso = Lasso(alpha = 2)
     lasso.fit(train_x,train_y)
     predict_y = lasso.predict(test_x)
     print(r2_score(test_y,predict_y))
@@ -255,7 +247,7 @@ for train_index, test_index in kf.split(X):
     test_x = X.iloc[test_index]
     test_y = y.iloc[test_index]
     
-    ridge = Ridge(alpha = 0.5)
+    ridge = Ridge(alpha = 5)
     ridge.fit(train_x,train_y)
     predict_y = ridge.predict(test_x)
     print(r2_score(test_y,predict_y))
