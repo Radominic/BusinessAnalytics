@@ -97,7 +97,7 @@ train_new.groupby('StateHoliday')['Sales'].mean()
 varlist = ['Store','Date','DayOfWeek',  'Promo',
            'StoreType', 'Assortment','Sales',
        'CompetitionDistance', 'CompetitionOpen',
-        'PromoOpen','StateHoliday']
+        'PromoOpen','StateHoliday','Open','Customers']
 X = train_new[varlist]
 
 X['WeekEnd'] = train_new['DayOfWeek'].apply(lambda x: 1 if x is 7 or x is 1 else 0)
@@ -114,7 +114,7 @@ for c in catvar:
     X = pd.concat((X,dummy),axis=1)
     
 
-    
+
 #historical variables
 train_new.groupby(train_new['Date'].dt.month)['Sales'].mean()
 import numpy as np
@@ -129,31 +129,40 @@ def moving_average(data,col,window,lag=0):
 
 
 sel_train = pd.DataFrame()
-sel_train['Sales1W']=moving_average(train,'Sales',7,7)
-sel_train['Sales2W']=moving_average(train,'Sales',14,7)
-sel_train['Sales3W']=moving_average(train,'Sales',21,7)
-sel_train['Sales4W']=moving_average(train,'Sales',28,7)
+sel_train['Sales1W']=moving_average(X,'Sales',7,7)
+
+sel_train['Sales2W']=moving_average(X,'Sales',14,7)
+sel_train['Sales3W']=moving_average(X,'Sales',21,7)
+sel_train['Sales4W']=moving_average(X,'Sales',28,7)
 sel_train['Sales1W_4W_diff']=sel_train['Sales1W']-sel_train['Sales4W']
 sel_train['Sales1W_4W_ratio']=sel_train['Sales1W']/sel_train['Sales4W']
-sel_train['Customers1W']=moving_average(train,'Customers',7,7)
-sel_train['Customers2W']=moving_average(train,'Customers',14,7)
-sel_train['Customers3W']=moving_average(train,'Customers',21,7)
-sel_train['Customers4W']=moving_average(train,'Customers',28,7)
+
+
+sel_train['Customers1W']=moving_average(X,'Customers',7,7)
+
+sel_train['Customers2W']=moving_average(X,'Customers',14,7)
+sel_train['Customers3W']=moving_average(X,'Customers',21,7)
+sel_train['Customers4W']=moving_average(X,'Customers',28,7)
 sel_train['Customers1W_4W_diff'] = sel_train['Customers1W']-sel_train['Customers4W']
 sel_train['Customers1W_4W_ratio'] = sel_train['Customers1W']/sel_train['Customers4W']
 
-sel_train['Sales'] = train['Sales']
+
+sel_train['Sales'] = X['Sales']
 sel_train = sel_train[sel_train.Sales>0]
 
 X['Sales1W_4W_ratio'] = sel_train['Sales1W_4W_ratio']
 X['Customers1W_4W_ratio'] = sel_train['Customers1W_4W_ratio']
 
+
 X['Sales1W']=sel_train['Sales1W']
+
 X['Sales2W']=sel_train['Sales2W']
 X['Sales3W']=sel_train['Sales3W']
 X['Sales4W']=sel_train['Sales4W']
 X['Sales1W_4W_diff']=sel_train['Sales1W_4W_diff']
+
 X['Customers1W']=sel_train['Customers1W']
+
 X['Customers2W']=sel_train['Customers2W']
 X['Customers3W']=sel_train['Customers3W']
 X['Customers4W']=sel_train['Customers4W']
@@ -167,7 +176,7 @@ X = X.drop(['Store']+catvar,axis=1)
 
 y = X['Sales']
 X = X.drop(['Sales'],axis=1)
-
+X = X.drop(['Customers'],axis =1)
 #data normalization 
 from sklearn import preprocessing
 
@@ -179,15 +188,19 @@ X['CompetitionOpen']= min_max_scaler.fit_transform(X[['CompetitionOpen']])
 X['PromoOpen']= min_max_scaler.fit_transform(X[['PromoOpen']])
 
 X['Sales1W']= min_max_scaler.fit_transform(X[['Sales1W']])
+
 X['Sales2W']= min_max_scaler.fit_transform(X[['Sales2W']])
 X['Sales3W']= min_max_scaler.fit_transform(X[['Sales3W']])
 X['Sales4W']= min_max_scaler.fit_transform(X[['Sales4W']])
 X['Sales1W_4W_diff']= min_max_scaler.fit_transform(X[['Sales1W_4W_diff']])
+
 X['Customers1W']= min_max_scaler.fit_transform(X[['Customers1W']])
+
 X['Customers2W']= min_max_scaler.fit_transform(X[['Customers2W']])
 X['Customers3W']= min_max_scaler.fit_transform(X[['Customers3W']])
 X['Customers4W']= min_max_scaler.fit_transform(X[['Customers4W']])
 X['Customers1W_4W_diff']= min_max_scaler.fit_transform(X[['Customers1W_4W_diff']])
+
 
 
 #seasonality
@@ -206,12 +219,14 @@ y = y.reset_index()
 X =X.drop(['index'],axis=1)
 y =y.drop(['index'],axis=1)
 
+
 #kfold validation
 from sklearn.model_selection import KFold
 kf = KFold(n_splits = 5,shuffle=True, random_state = 1)
 
 from sklearn.linear_model import LinearRegression, Lasso, Ridge
 from sklearn.metrics import r2_score
+
 #linear regression
 for train_index, test_index in kf.split(X):
     train_x = X.iloc[train_index]
@@ -233,7 +248,7 @@ for train_index, test_index in kf.split(X):
     test_x = X.iloc[test_index]
     test_y = y.iloc[test_index]
     
-    lasso = Lasso(alpha = 2)
+    lasso = Lasso(alpha = 0.01)
     lasso.fit(train_x,train_y)
     predict_y = lasso.predict(test_x)
     print(r2_score(test_y,predict_y))
@@ -247,7 +262,7 @@ for train_index, test_index in kf.split(X):
     test_x = X.iloc[test_index]
     test_y = y.iloc[test_index]
     
-    ridge = Ridge(alpha = 5)
+    ridge = Ridge(alpha = 0.01)
     ridge.fit(train_x,train_y)
     predict_y = ridge.predict(test_x)
     print(r2_score(test_y,predict_y))
